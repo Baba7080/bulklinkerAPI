@@ -1,0 +1,16 @@
+[31merror[39m: Error: Not found
+    at file:///C:/Users/Asus/Documents/nodeServer/src/app.js:52:10
+    at Layer.handle [as handle_request] (C:\Users\Asus\Documents\nodeServer\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Users\Asus\Documents\nodeServer\node_modules\express\lib\router\index.js:328:13)
+    at C:\Users\Asus\Documents\nodeServer\node_modules\express\lib\router\index.js:286:9
+    at Function.process_params (C:\Users\Asus\Documents\nodeServer\node_modules\express\lib\router\index.js:346:12)
+    at Immediate.next (C:\Users\Asus\Documents\nodeServer\node_modules\express\lib\router\index.js:280:10)
+    at Immediate._onImmediate (C:\Users\Asus\Documents\nodeServer\node_modules\express\lib\router\index.js:646:15)
+    at process.processImmediate (node:internal/timers:480:21)
+[31merror[39m: GET /api/v1/core/user/login?email=sourabh%40mail.com&password=Sourabh%401234 404 - 4.790 ms - message: Not found
+[31merror[39m: [object Object]
+[31merror[39m: [object Object]
+[31merror[39m: Error: querySrv ETIMEOUT _mongodb._tcp.ai-anshuman.hgeku.mongodb.net
+    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/promises:275:17)
+[31merror[39m: [object Object]
+[31merror[39m: [object Object]
