@@ -1,0 +1,19 @@
+MONGODB_URL  = mongodb+srv://admin:eNI67PBID6yK89iU@ai-anshuman.hgeku.mongodb.net/?retryWrites=true&w=majority
+MONGODB_PASS= eNI67PBID6yK89iU
+MONGO_PORT = 27017
+MONGODB_USER = admin
+MONGODB_DBNAME = testServer
+PORT = 80
+NODE_ENV = development
+
+# JWT
+# JWT secret key
+JWT_SECRET=thisisasamplesecret
+# Number of minutes after which an access token expires
+JWT_ACCESS_EXPIRATION_MINUTES=60
+# Number of days after which a refresh token expires
+JWT_REFRESH_EXPIRATION_DAYS=30
+# Number of minutes after which a reset password token expires
+JWT_RESET_PASSWORD_EXPIRATION_MINUTES=10
+# Number of minutes after which a verify email token expires
+JWT_VERIFY_EMAIL_EXPIRATION_MINUTES=10

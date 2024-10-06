@@ -19,7 +19,7 @@ const routes = [
         path: "/setUpUser",
         method: "post",
         version: "v1",
-        auth: "setUpUser",
+        auth: 'setUpUser',
         function: setUpUser
     },
     {
@@ -47,21 +47,21 @@ const routes = [
         path: "/uploadCSV",
         method: "post",
         version: "v1",
-        auth: false,
+        auth: 'uploadCSV',
         function: uploadCSV
     },
     {
         path: "/getCSV",
         method: "all",
         version: "v1",
-        auth: false,
+        auth: "getCSV",
         function: getCSV
     },
     {
         path: "/sendMessages",
         method: "post",
         version: "v1",
-        auth: false,
+        auth: 'sendMessages',
         function: sendMessages
     },
 ]

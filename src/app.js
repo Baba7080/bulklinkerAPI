@@ -32,7 +32,35 @@ app.use(express.urlencoded({ extended: true }));
 // enable cors
 app.use(cors());
 app.options('*', cors());
+// Webhook verification endpoint
+app.get('/api/webhook', (req, res) => {
+    const VERIFY_TOKEN = 'sourabh123456789@shuklatest';
 
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+            console.log('WEBHOOK_VERIFIED');
+            res.status(200).send(challenge);
+        } else {
+            res.sendStatus(403);
+        }
+    }
+});
+
+// Webhook event endpoint
+app.post('/api/webhook', (req, res) => {
+    const body = req.body;
+
+    if (body.object) {
+        console.log('Received webhook:', JSON.stringify(body, null, 2));
+        res.sendStatus(200);
+    } else {
+        res.sendStatus(404);
+    }
+});
 // jwt authentication
 app.use(passport.initialize());
 passport.use('jwt', jwtStrategy);

@@ -22,10 +22,22 @@ const accountSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    access_token: {
+    number_registered: {
         type: String,
         required: true,
     },
+    user_assigned: {
+        type: String,
+        required: true,
+    },
+    subscribed_apps: {
+        type: String,
+        required: true,
+    },
+    phone_number_details: {
+        type: mongoose.Schema.Types.Mixed, // Allow flexibility in data type
+        required: true
+    }
 }, {
     timestamps: true,
 });

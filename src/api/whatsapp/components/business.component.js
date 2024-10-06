@@ -1,9 +1,10 @@
-import { createAccount, getAccountByUserId } from "../../../services/account.service.js"
+import { createAccount, getAccountById, getAccountByUserId } from "../../../services/account.service.js"
 import { catchAsync } from "../../../utils/catchAsync.js"
 import { getData, postData } from "../api/callAPI.js"
 import fs from 'fs';
 import path from 'path';
 import csv from 'csv-parser';
+import { sendMessage } from "./SQS.helper.js";
 
 // export const getBusinessAccount = catchAsync(async (req, res) => {
 //     try {
@@ -26,17 +27,87 @@ import csv from 'csv-parser';
 export const setUpUser = catchAsync(async (req, res) => {
     let user = req.getUser();
     let user_id = user._id;
-    let whatsapp_business_account_id = "249632854897704";
-    let phone_number_id = "248166918380550";
-    let access_token = "EAAGBjyPxpC8BOZBUKx2Gzm564vbEqPFDZAh9Mw4W6FU0QFkfhDy4yPCZC7W9N4nxd8jVjZASwJ72iDK9QZAk97yvdmXOCsuGsUj1afjXpn3cFqAk896l0jkZAQhiSKoZBafKuIikeHrFZB7xxgaawTzCZA5BJAmuHn2ctDVwAieUqbMQCCZCW7Ogwwdc14B4AmdBXzRv1or1y20malqzHUKM07L2jeeKpF9vJSbQZDZD"
-    let name = "BYTELINKUP IT SOLUTIONS PVT LTD";
-    let message_template_namespace = "a2bc147e_50cd_4aea_9a6f_757459f3753e"
+    let { code, waba_id, phone_number_id } = req.body
+    let resp = { success: false, message: "Please Try again" };
+    let whatsapp_business_account_id = "";
+    let access_token = "12345"
+    let name = "";
+    let message_template_namespace = ""
+    let number_registered = 'false';
+    let user_assigned = 'false';
+    let subscribed_apps = 'false';
+    let phone_number_details = 'false';
     try {
-        let res = await createAccount({ user_id, whatsapp_business_account_id, phone_number_id, access_token, name, message_template_namespace });
-        return { success: true, message: "successful", res }
+        if (waba_id && phone_number_id) {
+            let userData = await getAccountById(waba_id, phone_number_id, user_id)
+            if (userData) {
+                number_registered = userData.number_registered ?? "false";
+                user_assigned = userData.user_assigned ?? "false";
+                subscribed_apps = userData.subscribed_apps ?? "false";
+            }
+            resp = await getData(`${waba_id}`);
+            if (resp.success) {
+                if (resp.res) {
+                    whatsapp_business_account_id = waba_id;
+                    name = resp.res.name ?? "";
+                    message_template_namespace = resp.res.message_template_namespace ?? ""
+                }
+            }
+            resp = await getData(`${phone_number_id}`);
+            if (resp.success && resp.res) {
+                phone_number_details = resp.res
+            }
+            if (number_registered === "false") {
+                resp = await postData({ messaging_product: "whatsapp", pin: "123456" }, `${phone_number_id}/register`)
+                if (resp.success) {
+                    number_registered = 'true';
+                }
+            }
+            if (user_assigned === "false") {
+                resp = await postData({}, `${waba_id}/assigned_users?user=122098793498353532&tasks=['MANAGE']`)
+                if (resp.success && resp.res && resp.res.success) {
+                    user_assigned = 'true';
+                }
+            }
+            // resp = await getData(`${waba_id}/assigned_users?business=259526040233373`)
+            if (subscribed_apps === "false") {
+                resp = await postData({}, `${waba_id}/subscribed_apps`)
+                if (resp.success) {
+                    subscribed_apps = 'true';
+                }
+            }
+            resp = await createAccount({ user_id, whatsapp_business_account_id, phone_number_id, access_token, name, message_template_namespace, number_registered, user_assigned, subscribed_apps, phone_number_details });
+            return { success: true, message: "successful", resp }
+        }
+        return resp;
+        // resp = await getData(`oauth/access_token?client_id=1075467237089677&client_secret=9422f9734dc9a21e0894721d20b4e419&code=${code}`, code)
+        // console.log(resp)
+        // if (resp.success) {
+        // let token = "EAAPSIbqiYY0BO51zVbLwwWSF3ZAVF3BiberprXyq5hpkSCDIx5eA7htA3eyANCmpJZC6KVngBJBeTw6LOxoLGyXM0WqslJ86zmEYt82b26VZC1ZCvGzcaJaHl1nyokdSAoFYIugHbUfDCVh0vSAU4kCZCZAVMTLvX0VLvjUUDwBVZCt4c7s8jo09WVtOfUf6JFTZB51ZC2qZBGpO7olEAhSkpgb3obtZAtJxTrYwPpZAssDu6rAzWvHVPRCeghDv9OgW"
+        // resp.res.access_token
+        // console.log(token)
+        // resp = await getData(`debug_token?input_token=${token}`, code)
+        // if (resp.success) {
+        //     if (resp.res && resp.res.data && resp.res.data.granular_scopes) {
+        //         let granular_scopes = resp.res.data.granular_scopes;
+        //         console.log(granular_scopes)
+        //         let waba_ID = granular_scopes.find(x => x.scope === "whatsapp_business_management") ? granular_scopes.find(x => x.scope === "whatsapp_business_management").target_ids[0] : false;
+        //         console.log(waba_ID)
+        //         if(waba_ID){
+        //             resp = await getData(`${waba_ID}/phone_numbers`);
+        //             console.log(resp)
+        //         }
+        //     }
+        //     return resp
+        // }
+        // }else{
+        //     return resp;
+        // }
+        // return { "success": true, "message": "valid" }
     } catch (err) {
         return { success: false, message: err.message }
     }
+
 })
 
 export const getUser = catchAsync(async (req, res) => {
@@ -77,46 +148,24 @@ export const saveUserTemplates = catchAsync(async (req, res) => {
 })
 export const uploadCSV = catchAsync(async (req, res) => {
     let user = req.getUser();
-    let user_id = user._id;
+    let user_id = user._id.toString();
 
     try {
         if (!req.files || Object.keys(req.files).length === 0) {
             return res.status(400).send('No files were uploaded.');
         }
-        // console.log(req.files)
-        // The name of the "input" field is "file"
         const uploadedFile = req.files.file;
-        // console.log(uploadedFile)
-        const uploadDir = path.resolve(process.cwd() + "/uploads", "1");
+        const uploadDir = path.resolve(process.cwd() + "/uploads", user_id);
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir);
         }
-        const uploadPath = path.resolve(process.cwd() + "/uploads/" + "1", uploadedFile.name);
-
-        console.log(uploadPath)
-        // Use mv() method to place file on the server
+        const uploadPath = path.resolve(process.cwd() + "/uploads/" + user_id, uploadedFile.name);
         uploadedFile.mv(uploadPath, (err) => {
             if (err) {
                 return res.status(500).send(err);
             }
-            return { success: true, message: "file uploaded" }
-            // Read and process the CSV file
-            // const results = [];
-            // fs.createReadStream(uploadPath)
-            //     .pipe(csv())
-            //     .on('data', (row) => {
-            //         // Perform actions on the data here
-            //         results.push(row);
-            //         console.log(row);
-            //     })
-            //     .on('end', () => {
-            //         console.log('CSV file successfully processed.');
-            //         res.status(200).send({ message: 'File uploaded and processed successfully.', data: results });
-            //     })
-            //     .on('error', (error) => {
-            //         res.status(500).send(error);
-            //     });
         })
+        return { success: true, message: "file uploaded" }
     } catch (err) {
         return { success: false, message: err.message }
     }
@@ -124,9 +173,9 @@ export const uploadCSV = catchAsync(async (req, res) => {
 
 export const getCSV = catchAsync(async (req, res) => {
     let user = req.getUser();
-    let user_id = user._id;
+    let user_id = user._id.toString();
     try {
-        const uploadDir = path.resolve(process.cwd() + "/uploads", "1");
+        const uploadDir = path.resolve(process.cwd() + "/uploads", user_id);
         let filess = [];
 
         if (fs.existsSync(uploadDir)) {
@@ -149,33 +198,30 @@ export const getCSV = catchAsync(async (req, res) => {
 
 export const sendMessages = catchAsync(async (req, res) => {
     const user = req.getUser();
+    let user_id = user._id.toString();
     const payload = req.body.payload;
     const url = `${req.body.id}/messages`;
-
     try {
-        const uploadDir = path.resolve(process.cwd(), 'uploads', '1', req.body.csv);
+        const uploadDir = path.resolve(process.cwd(), 'uploads', user_id, req.body.csv);
 
         if (!fs.existsSync(uploadDir)) {
             return res.status(404).json({ success: false, message: "CSV not found" });
         }
 
         const results = [];
-
+        // let res = { success: false, message: "Unable to initiate process" }
         fs.createReadStream(uploadDir)
             .pipe(csv())
             .on('data', (row) => {
                 results.push(row.phone); // Assume 'phone' is the column name in the CSV
             })
             .on('end', async () => {
-                console.log('CSV file successfully processed.');
                 try {
-                    for (let i = 0; i < results.length; i++) {
-                        const phoneNumber = results[i];
-                        const response = await postData({ ...payload, to: phoneNumber }, url);
-                        results.push(response)
-                        console.log(`Message sent to ${phoneNumber}:`, response);
+                    const chunkedNumbers = chunkPhoneNumbers(results, process.env.CHUNK_SIZE ?? 200);
+                    for (const chunk of chunkedNumbers) {
+                         await sendMessage({ user_id, payload, csv: req.body.csv, url, chunk });
                     }
-                    res.status(200).json({ message: 'File processed successfully.', data: results });
+                    res.status(200).json({ success: true, message: "Process Initiated Successfully" });
                 } catch (error) {
                     res.status(500).json({ success: false, message: error.message });
                 }
@@ -183,9 +229,17 @@ export const sendMessages = catchAsync(async (req, res) => {
             .on('error', (error) => {
                 res.status(500).json({ success: false, message: error.message });
             });
+
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
 
+function chunkPhoneNumbers(phoneNumbers, chunkSize = 200) {
+    const chunks = [];
+    for (let i = 0; i < phoneNumbers.length; i += chunkSize) {
+        chunks.push(phoneNumbers.slice(i, i + chunkSize));
+    }
+    return chunks;
+}
